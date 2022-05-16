@@ -61,7 +61,6 @@ void* thread_function (void *p)
 		}
 		else{
 			pthread_mutex_unlock (&job_queue_mutex);
-			sem_wait (&job_queue_count);
 		}
 		
   }
