@@ -36,13 +36,12 @@ void initialize_job_queue ()
 void* thread_function (void *p)
 {
 	struct args* arg = (struct args*) p;
-	printf("Barbeiro dormindo\n");
+	struct job* next_job;
+	printf("Barber sleeping\n");
     sem_wait (&job_queue_count);
-	printf("Barbeiro %d acordou\n",arg->barbeiroNum);
+	printf("Barber %d wake up\n",arg->barbeiroNum);
+	pthread_mutex_lock (&job_queue_mutex);
   	while (1) {
-		struct job* next_job;
-		int test=0;
-		pthread_mutex_lock (&job_queue_mutex);
 		next_job = job_queue;
 		/* remove da lista  */
 		job_queue = job_queue->next;
@@ -57,10 +56,8 @@ void* thread_function (void *p)
 			pthread_mutex_unlock (&job_queue_mutex);
 			printf("Barber %d is sleeping\n",arg->barbeiroNum);
 			sem_wait (&job_queue_count);
-			printf("Barbeiro %d wake up\n",arg->barbeiroNum);
-		}
-		else{
-			pthread_mutex_unlock (&job_queue_mutex);
+			printf("Barber %d wake up\n",arg->barbeiroNum);
+			pthread_mutex_lock (&job_queue_mutex);
 		}
 		
   }
