@@ -113,7 +113,7 @@ int main (int argc, char* argv[]){
 	int NUMbarbeiros,NUMcadeiras, corteS, clienteS;
 	pthread_t thread_idFila;
 	if(argc<5){
-			printf("\t\tFaltam argumentos\n \t\tCOMO USAR:\n ./program <Num. barbeiros> <Num. cadeiras> <Duracao do corte> <tempode chegada clientes>\nDefinindo valor padrao 4 6 2 1\n");
+			printf("\t\tFaltam argumentos\n \t\tHOW TO USE:\n ./program <Num. barbers> <Num. Max queue> <Cutting time> <tempo de chegada clientes>\nSetting values 4 6 2 1\n");
 			sleep(2);
 			NUMbarbeiros=4;
 			NUMcadeiras=6;
