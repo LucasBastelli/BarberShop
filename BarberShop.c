@@ -10,13 +10,13 @@
 static int count = 0;  
 
 struct job {
-	int clientenum;
+	int clientnum;
 	struct job *next; 
 };
 
 struct args{
-  int tempoCorte;
-  int barbeiroNum; 
+  int HaircutTime;
+  int barberNum; 
 };
 
 struct job* job_queue;
@@ -39,7 +39,7 @@ void* thread_function (void *p)
 	struct job* next_job;
 	printf("Barber sleeping\n");
     sem_wait (&job_queue_count);
-	printf("Barber %d wake up\n",arg->barbeiroNum);
+	printf("Barber %d wake up\n",arg->barberNum);
 	pthread_mutex_lock (&job_queue_mutex);
   	while (1) {
 		next_job = job_queue;
@@ -47,16 +47,16 @@ void* thread_function (void *p)
 		job_queue = job_queue->next;
 		/* Libera a lista para o próximo thread  */
 		pthread_mutex_unlock (&job_queue_mutex);
-		printf("Barber %d is cutting client %d\n",arg->barbeiroNum,next_job->clientenum);
-		sleep(arg->tempoCorte);
-		printf("Barber %d finished client %d\n",arg->barbeiroNum,next_job->clientenum);
+		printf("Barber %d is cutting client %d\n",arg->barberNum,next_job->clientnum);
+		sleep(arg->HaircutTime);
+		printf("Barber %d finished client %d\n",arg->barberNum,next_job->clientnum);
 		free (next_job);
 		pthread_mutex_lock (&job_queue_mutex);
 		if(job_queue==NULL){
 			pthread_mutex_unlock (&job_queue_mutex);
-			printf("Barber %d is sleeping\n",arg->barbeiroNum);
+			printf("Barber %d is sleeping\n",arg->barberNum);
 			sem_wait (&job_queue_count);
-			printf("Barber %d wake up\n",arg->barbeiroNum);
+			printf("Barber %d wake up\n",arg->barberNum);
 			pthread_mutex_lock (&job_queue_mutex);
 		}
 		
@@ -66,25 +66,25 @@ void* thread_function (void *p)
 
 void* enqueue_job (void *p)
 {
-	int* tamanhoFila = (int*) p;
+	int* QueueSize = (int*) p;
 	struct job *new_job;
 	struct job *aux;
 	count++;           //Cliente chegou
-	int fila=0;
+	int queue=0;
     printf("Client %d enter the barber shop \n",count);
 	/* Alocar o novo objeto de tarefa. */
 	new_job = (struct job*) malloc (sizeof (struct job));
-	new_job->clientenum=count;
+	new_job->clientnum=count;
 	pthread_mutex_lock (&job_queue_mutex);
 	/* Colocar a nova tarefa no fim da fila */
 	aux=job_queue;
 	if(aux!=NULL){
 		while(aux->next!=NULL){
-			fila++;
+			queue++;
 			aux=aux->next;
 		}
-		if(fila>=*tamanhoFila){
-			printf("Client %d foi embora sem cortar o cabelo. Sala de espera cheia.\n",count);
+		if(queue>=*QueueSize){
+			printf("Client %d left without a haircut. Full waiting room.\n",count);
 			sem_post (&job_queue_count);
 			pthread_mutex_unlock (&job_queue_mutex);
 			free(new_job);
@@ -110,32 +110,40 @@ void* enqueue_job (void *p)
 
 int main (int argc, char* argv[]){  
 	initialize_job_queue ();
-	int NUMbarbeiros,NUMcadeiras, corteS, clienteS;
-	pthread_t thread_idFila;
-	if(argc<5){
-			printf("\t\tFaltam argumentos\n \t\tHOW TO USE:\n ./program <Num. barbers> <Num. Max queue> <Cutting time> <tempo de chegada clientes>\nSetting values 4 6 2 1\n");
+	int NUMbarbers,NUMchairs, cutS, clientS, NUMclients;
+	pthread_t thread_idQueue;
+	if(argc<6){
+			printf("\t\tNo arguments\n \t\tHOW TO USE:\n ./program <Num. barbers> <Num. Max queue> <Cutting time> <Time between clients> <Number of clients\nSetting values 4 6 2 1 100\n");
 			sleep(2);
-			NUMbarbeiros=4;
-			NUMcadeiras=6;
-			corteS=2;
-			clienteS=1;
+			NUMbarbers=4;
+			NUMchairs=6;
+			cutS=2;
+			clientS=1;
+			NUMclients=100;
 	}
 	else{
-		NUMbarbeiros=atoi(argv[1]);
-		NUMcadeiras=atoi(argv[2]);
-		corteS=atoi(argv[3]);
-		clienteS=atoi(argv[4]);		
+		NUMbarbers=atoi(argv[1]);
+		NUMchairs=atoi(argv[2]);
+		cutS=atoi(argv[3]);
+		clientS=atoi(argv[4]);
+		NUMclients=atoi(argv[5]);
 	}
-	struct args arg[NUMbarbeiros];
-	pthread_t thread_id[NUMbarbeiros];
-	for(int i=0;i<NUMbarbeiros;i++){
-		arg[i].tempoCorte=corteS;
-		arg[i].barbeiroNum=i+1;
+	struct args *arg=(struct args *)malloc(NUMbarbers * sizeof(struct args));
+	pthread_t *thread_id=(pthread_t *)malloc(NUMbarbers * sizeof(pthread_t));
+	for(int i=0;i<NUMbarbers;i++){
+		arg[i].HaircutTime=cutS;
+		arg[i].barberNum=i+1;
 		pthread_create(&thread_id[i],NULL,&thread_function,&arg[i]);
 	}
 	sleep(1);
-	while(1){
-		pthread_create(&thread_idFila,NULL,&enqueue_job,&NUMcadeiras);
-		sleep(clienteS);
+	while(NUMclients>0){
+		pthread_create(&thread_idQueue,NULL,&enqueue_job,&NUMchairs);
+		sleep(clientS);
+		NUMclients--;
 	}
+	while(job_queue!=NULL){ //Doesnt need to be atomic because you'll not change it
+		sleep(1); //Wait all the clients go out
+	}
+	free(thread_id);
+	free(arg);
 }
